@@ -2,14 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .text-shadow-cam { text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --camera-yellow: 48 100% 60%;
+    --camera-chip: 0 0% 12%;
+    --camera-overlay: 0 0% 0% / 0.45;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
