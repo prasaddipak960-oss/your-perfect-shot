@@ -14,81 +14,55 @@ export const useCamera = () => {
   const [torchOn, setTorchOn] = useState(false);
 
   const stop = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-    setTorchSupported(false);
-    setTorchOn(false);
-
-    const video = videoRef.current;
-    if (video) {
-      video.pause();
-      video.srcObject = null;
-    }
   }, []);
 
-  const attachStream = useCallback(async (stream: MediaStream) => {
+  const attachStream = async (stream: MediaStream) => {
     streamRef.current = stream;
-    setPermission("granted");
-
-    const video = videoRef.current;
-    if (video) {
-      video.srcObject = stream;
-      video.muted = true;
-      video.defaultMuted = true;
-      video.autoplay = true;
-      video.playsInline = true;
-      video.setAttribute("muted", "true");
-      video.setAttribute("autoplay", "true");
-      video.setAttribute("playsinline", "true");
-      video.setAttribute("webkit-playsinline", "true");
-
-      const resumePlayback = () => {
-        void video.play().then(() => setReady(true)).catch(() => undefined);
-        window.removeEventListener("touchstart", resumePlayback);
-        window.removeEventListener("click", resumePlayback);
-      };
-
-      const playVideo = async () => {
-        try {
-          await video.play();
-          setReady(true);
-        } catch {
-          window.addEventListener("touchstart", resumePlayback, { once: true });
-          window.addEventListener("click", resumePlayback, { once: true });
-        }
-      };
-
-      if (video.readyState >= 1) {
-        await playVideo();
-      } else {
-        video.onloadedmetadata = () => {
-          void playVideo();
+    const v = videoRef.current;
+    if (v) {
+      v.srcObject = stream;
+      v.muted = true;
+      v.setAttribute("playsinline", "true");
+      v.setAttribute("webkit-playsinline", "true");
+      v.setAttribute("autoplay", "true");
+      try {
+        await v.play();
+      } catch {
+        // some mobile browsers reject play() if not in a gesture; retry on first touch
+        const resume = () => {
+          v.play().catch(() => {});
+          window.removeEventListener("touchstart", resume);
+          window.removeEventListener("click", resume);
         };
+        window.addEventListener("touchstart", resume, { once: true });
+        window.addEventListener("click", resume, { once: true });
       }
-    } else {
-      setReady(true);
     }
-
     const track = stream.getVideoTracks()[0];
     const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
     setTorchSupported(!!caps.torch);
     setTorchOn(false);
-  }, []);
+    setPermission("granted");
+    setReady(true);
+  };
 
   const start = useCallback(
     async (mode: FacingMode) => {
       stop();
       setReady(false);
       setError(null);
-      setPermission("prompt");
 
+      // Mobile camera requires HTTPS (or localhost)
       const isSecure =
         typeof window !== "undefined" &&
-        (window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1");
-
+        (window.isSecureContext ||
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1");
       if (!isSecure) {
-        setPermission("denied");
         setError("Camera requires HTTPS. Open this site over a secure (https) connection.");
+        setPermission("denied");
         return;
       }
 
@@ -97,24 +71,8 @@ export const useCamera = () => {
         return;
       }
 
-      try {
-        const perms = (navigator as Navigator & {
-          permissions?: { query: (descriptor: { name: PermissionName }) => Promise<PermissionStatus> };
-        }).permissions;
-
-        if (perms?.query) {
-          const status = await perms.query({ name: "camera" as PermissionName });
-          if (status.state === "denied") {
-            setPermission("denied");
-            setError("Camera permission is required");
-            return;
-          }
-        }
-      } catch {
-        // Permission API is not available everywhere; continue to getUserMedia.
-      }
-
-      const preferredVideo: MediaTrackConstraints = {
+      // Try with audio first (for video recording), fallback to video-only
+      const videoConstraints: MediaTrackConstraints = {
         facingMode: { ideal: mode },
         width: { ideal: 1920 },
         height: { ideal: 1080 },
@@ -122,42 +80,32 @@ export const useCamera = () => {
 
       try {
         let stream: MediaStream;
-
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: preferredVideo,
-            audio: false,
+            video: videoConstraints,
+            audio: true,
           });
-        } catch (preferredError) {
-          const err = preferredError as { name?: string };
-          const shouldFallback = ["OverconstrainedError", "NotFoundError", "DevicesNotFoundError", "AbortError"].includes(
-            err?.name ?? ""
-          );
-
-          if (!shouldFallback) {
-            throw preferredError;
+        } catch (audioErr: unknown) {
+          const ae = audioErr as { name?: string };
+          // If audio failed but it's not a permission denial, try video-only
+          if (ae?.name !== "NotAllowedError" && ae?.name !== "SecurityError") {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+              audio: false,
+            });
+          } else {
+            throw audioErr;
           }
-
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false,
-          });
         }
-
         await attachStream(stream);
       } catch (e: unknown) {
-        stop();
-        setReady(false);
-
         const err = e as { name?: string; message?: string };
         const denied =
           err?.name === "NotAllowedError" ||
-          err?.name === "PermissionDeniedError" ||
           err?.name === "SecurityError" ||
           /denied|permission/i.test(err?.message ?? "");
         const notFound = err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError";
         const inUse = err?.name === "NotReadableError" || err?.name === "TrackStartError";
-
         setPermission(denied ? "denied" : "prompt");
         setError(
           denied
@@ -170,30 +118,50 @@ export const useCamera = () => {
         );
       }
     },
-    [attachStream, stop]
+    [stop]
   );
 
+  // Auto-start on mount + when facing changes
   useEffect(() => {
-    void start(facing);
+    // Pre-check permission state where supported (Chromium/Android)
+    const tryStart = async () => {
+      try {
+        const perms = (navigator as Navigator & {
+          permissions?: { query: (d: { name: PermissionName }) => Promise<PermissionStatus> };
+        }).permissions;
+        if (perms?.query) {
+          const status = await perms.query({ name: "camera" as PermissionName });
+          if (status.state === "denied") {
+            setPermission("denied");
+            setError("Camera permission is required");
+            return;
+          }
+        }
+      } catch {
+        /* permissions API not supported, continue */
+      }
+      start(facing);
+    };
+    tryStart();
     return () => stop();
-  }, [facing, start, stop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facing]);
 
   const retry = useCallback(() => {
-    void start(facing);
-  }, [facing, start]);
+    start(facing);
+  }, [start, facing]);
 
-  const flip = () => setFacing((current) => (current === "user" ? "environment" : "user"));
+  const flip = () => setFacing((f) => (f === "user" ? "environment" : "user"));
 
   const toggleTorch = async () => {
     const track = streamRef.current?.getVideoTracks?.()[0];
     if (!track || !torchSupported) return;
-
     try {
       const next = !torchOn;
       await track.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] });
       setTorchOn(next);
     } catch {
-      // Ignore unsupported torch constraint errors.
+      /* ignore */
     }
   };
 
