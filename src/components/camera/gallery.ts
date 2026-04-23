@@ -5,6 +5,7 @@ export type GalleryItem = {
   type: "photo" | "video";
   dataUrl: string;
   createdAt: number;
+  filter?: string;
 };
 
 export const loadGallery = (): GalleryItem[] => {
@@ -18,13 +19,21 @@ export const loadGallery = (): GalleryItem[] => {
 export const saveItem = (item: GalleryItem) => {
   const all = loadGallery();
   all.unshift(item);
-  // Keep last 30 to avoid quota issues
   const trimmed = all.slice(0, 30);
   try {
     localStorage.setItem(KEY, JSON.stringify(trimmed));
   } catch {
-    // quota — drop oldest aggressively
     localStorage.setItem(KEY, JSON.stringify(trimmed.slice(0, 10)));
+  }
+  window.dispatchEvent(new Event("gallery-updated"));
+};
+
+export const updateItem = (id: string, patch: Partial<GalleryItem>) => {
+  const all = loadGallery().map((i) => (i.id === id ? { ...i, ...patch } : i));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(all));
+  } catch {
+    /* ignore */
   }
   window.dispatchEvent(new Event("gallery-updated"));
 };

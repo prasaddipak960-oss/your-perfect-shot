@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { GalleryItem, loadGallery, removeItem } from "./gallery";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2, X } from "lucide-react";
+import { Download, Trash2, Wand2, X } from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onEdit?: (item: GalleryItem) => void;
 }
 
-export const Gallery = ({ open, onClose }: Props) => {
+export const Gallery = ({ open, onClose, onEdit }: Props) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [active, setActive] = useState<GalleryItem | null>(null);
 
@@ -44,10 +45,15 @@ export const Gallery = ({ open, onClose }: Props) => {
             ) : (
               <video src={active.dataUrl} controls className="max-h-[60vh] mx-auto rounded" />
             )}
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center flex-wrap">
               <Button variant="secondary" onClick={() => download(active)}>
                 <Download className="w-4 h-4 mr-2" /> Download
               </Button>
+              {active.type === "photo" && onEdit && (
+                <Button onClick={() => onEdit(active)}>
+                  <Wand2 className="w-4 h-4 mr-2" /> Edit
+                </Button>
+              )}
               <Button
                 variant="destructive"
                 onClick={() => {
