@@ -18,43 +18,131 @@ export const useCamera = () => {
     streamRef.current = null;
   }, []);
 
+  const attachStream = async (stream: MediaStream) => {
+    streamRef.current = stream;
+    const v = videoRef.current;
+    if (v) {
+      v.srcObject = stream;
+      v.muted = true;
+      v.setAttribute("playsinline", "true");
+      v.setAttribute("webkit-playsinline", "true");
+      v.setAttribute("autoplay", "true");
+      try {
+        await v.play();
+      } catch {
+        // some mobile browsers reject play() if not in a gesture; retry on first touch
+        const resume = () => {
+          v.play().catch(() => {});
+          window.removeEventListener("touchstart", resume);
+          window.removeEventListener("click", resume);
+        };
+        window.addEventListener("touchstart", resume, { once: true });
+        window.addEventListener("click", resume, { once: true });
+      }
+    }
+    const track = stream.getVideoTracks()[0];
+    const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
+    setTorchSupported(!!caps.torch);
+    setTorchOn(false);
+    setPermission("granted");
+    setReady(true);
+  };
+
   const start = useCallback(
     async (mode: FacingMode) => {
       stop();
       setReady(false);
       setError(null);
+
+      // Mobile camera requires HTTPS (or localhost)
+      const isSecure =
+        typeof window !== "undefined" &&
+        (window.isSecureContext ||
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1");
+      if (!isSecure) {
+        setError("Camera requires HTTPS. Open this site over a secure (https) connection.");
+        setPermission("denied");
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Camera API not supported in this browser.");
+        return;
+      }
+
+      // Try with audio first (for video recording), fallback to video-only
+      const videoConstraints: MediaTrackConstraints = {
+        facingMode: { ideal: mode },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      };
+
       try {
-        // This call triggers the native OS / Android permission popup (Allow / Deny)
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: mode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: true,
-        });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: true,
+          });
+        } catch (audioErr: unknown) {
+          const ae = audioErr as { name?: string };
+          // If audio failed but it's not a permission denial, try video-only
+          if (ae?.name !== "NotAllowedError" && ae?.name !== "SecurityError") {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+              audio: false,
+            });
+          } else {
+            throw audioErr;
+          }
         }
-        const track = stream.getVideoTracks()[0];
-        const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
-        setTorchSupported(!!caps.torch);
-        setTorchOn(false);
-        setPermission("granted");
-        setReady(true);
+        await attachStream(stream);
       } catch (e: unknown) {
         const err = e as { name?: string; message?: string };
         const denied =
           err?.name === "NotAllowedError" ||
           err?.name === "SecurityError" ||
           /denied|permission/i.test(err?.message ?? "");
+        const notFound = err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError";
+        const inUse = err?.name === "NotReadableError" || err?.name === "TrackStartError";
         setPermission(denied ? "denied" : "prompt");
-        setError(denied ? "Camera permission is required" : err?.message || "Camera unavailable");
+        setError(
+          denied
+            ? "Camera permission is required"
+            : notFound
+            ? "No camera found on this device"
+            : inUse
+            ? "Camera is in use by another app. Close it and retry."
+            : err?.message || "Camera unavailable"
+        );
       }
     },
     [stop]
   );
 
+  // Auto-start on mount + when facing changes
   useEffect(() => {
-    start(facing);
+    // Pre-check permission state where supported (Chromium/Android)
+    const tryStart = async () => {
+      try {
+        const perms = (navigator as Navigator & {
+          permissions?: { query: (d: { name: PermissionName }) => Promise<PermissionStatus> };
+        }).permissions;
+        if (perms?.query) {
+          const status = await perms.query({ name: "camera" as PermissionName });
+          if (status.state === "denied") {
+            setPermission("denied");
+            setError("Camera permission is required");
+            return;
+          }
+        }
+      } catch {
+        /* permissions API not supported, continue */
+      }
+      start(facing);
+    };
+    tryStart();
     return () => stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
