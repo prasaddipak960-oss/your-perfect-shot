@@ -77,5 +77,5 @@ export const useCamera = () => {
     }
   };
 
-  return { videoRef, facing, ready, error, flip, torchSupported, torchOn, toggleTorch };
+  return { videoRef, facing, ready, error, permission, retry, flip, torchSupported, torchOn, toggleTorch };
 };
