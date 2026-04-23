@@ -281,9 +281,17 @@ export const CameraApp = () => {
 
   const runShutterAction = () => {
     if (mode === "Video" || mode === "Short Video") {
-      recording ? stopRecording() : startRecording();
+      if (recording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
     } else if (mode === "Time-Lapse") {
-      recording ? stopRecording() : startTimeLapse();
+      if (recording) {
+        stopRecording();
+      } else {
+        startTimeLapse();
+      }
     } else if (mode === "Beauty") {
       void capturePhoto(true);
     } else {
