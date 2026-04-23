@@ -275,10 +275,22 @@ export const CameraApp = () => {
             </div>
           )}
           {error && (
-            <div className="absolute inset-0 grid place-items-center bg-black/70 p-6 text-center">
-              <div>
-                <p className="text-sm text-foreground/90 mb-2">Camera permission needed</p>
-                <p className="text-xs text-foreground/60">{error}</p>
+            <div className="absolute inset-0 grid place-items-center bg-black/80 p-6 text-center">
+              <div className="max-w-xs">
+                <p className="text-base font-medium text-foreground mb-2">
+                  {permission === "denied" ? "Camera permission is required" : "Camera unavailable"}
+                </p>
+                <p className="text-xs text-foreground/60 mb-4">
+                  {permission === "denied"
+                    ? "Please allow camera access to continue. If you blocked it, enable it from your browser site settings."
+                    : error}
+                </p>
+                <button
+                  onClick={retry}
+                  className="px-4 py-2 rounded-full bg-camera-yellow text-black text-sm font-semibold"
+                >
+                  Retry
+                </button>
               </div>
             </div>
           )}
