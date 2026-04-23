@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { GalleryItem, loadGallery, removeItem } from "./gallery";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2, X } from "lucide-react";
+import { Download, Trash2, Wand2, X } from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onEdit?: (item: GalleryItem) => void;
 }
 
-export const Gallery = ({ open, onClose }: Props) => {
+export const Gallery = ({ open, onClose, onEdit }: Props) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [active, setActive] = useState<GalleryItem | null>(null);
 
