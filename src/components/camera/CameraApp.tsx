@@ -27,7 +27,7 @@ const MODE_FILTERS: Record<Mode, string> = {
 };
 
 export const CameraApp = () => {
-  const { videoRef, ready, error, flip, torchSupported, torchOn, toggleTorch, facing } = useCamera();
+  const { videoRef, ready, error, permission, retry, flip, torchSupported, torchOn, toggleTorch, facing } = useCamera();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunks = useRef<Blob[]>([]);
