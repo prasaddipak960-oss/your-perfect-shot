@@ -45,10 +45,15 @@ export const Gallery = ({ open, onClose, onEdit }: Props) => {
             ) : (
               <video src={active.dataUrl} controls className="max-h-[60vh] mx-auto rounded" />
             )}
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center flex-wrap">
               <Button variant="secondary" onClick={() => download(active)}>
                 <Download className="w-4 h-4 mr-2" /> Download
               </Button>
+              {active.type === "photo" && onEdit && (
+                <Button onClick={() => onEdit(active)}>
+                  <Wand2 className="w-4 h-4 mr-2" /> Edit
+                </Button>
+              )}
               <Button
                 variant="destructive"
                 onClick={() => {
