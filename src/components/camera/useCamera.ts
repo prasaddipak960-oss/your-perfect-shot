@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type FacingMode = "user" | "environment";
+export type PermissionState = "prompt" | "granted" | "denied";
 
 export const useCamera = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -8,6 +9,7 @@ export const useCamera = () => {
   const [facing, setFacing] = useState<FacingMode>("environment");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [permission, setPermission] = useState<PermissionState>("prompt");
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
 
@@ -22,6 +24,7 @@ export const useCamera = () => {
       setReady(false);
       setError(null);
       try {
+        // This call triggers the native OS / Android permission popup (Allow / Deny)
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: mode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: true,
@@ -35,10 +38,16 @@ export const useCamera = () => {
         const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
         setTorchSupported(!!caps.torch);
         setTorchOn(false);
+        setPermission("granted");
         setReady(true);
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : "Camera unavailable";
-        setError(msg);
+        const err = e as { name?: string; message?: string };
+        const denied =
+          err?.name === "NotAllowedError" ||
+          err?.name === "SecurityError" ||
+          /denied|permission/i.test(err?.message ?? "");
+        setPermission(denied ? "denied" : "prompt");
+        setError(denied ? "Camera permission is required" : err?.message || "Camera unavailable");
       }
     },
     [stop]
@@ -49,6 +58,10 @@ export const useCamera = () => {
     return () => stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
+
+  const retry = useCallback(() => {
+    start(facing);
+  }, [start, facing]);
 
   const flip = () => setFacing((f) => (f === "user" ? "environment" : "user"));
 
@@ -64,5 +77,5 @@ export const useCamera = () => {
     }
   };
 
-  return { videoRef, facing, ready, error, flip, torchSupported, torchOn, toggleTorch };
+  return { videoRef, facing, ready, error, permission, retry, flip, torchSupported, torchOn, toggleTorch };
 };
