@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { GalleryItem, loadGallery, removeItem } from "./gallery";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2, Wand2, X } from "lucide-react";
+import { Download, Share2, Trash2, Wand2, X } from "lucide-react";
+import { sharePhoto } from "../native/nativeBridge";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
