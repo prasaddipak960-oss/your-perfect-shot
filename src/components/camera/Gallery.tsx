@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { GalleryItem, loadGallery, removeItem } from "./gallery";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2, Wand2, X } from "lucide-react";
+import { Download, Share2, Trash2, Wand2, X } from "lucide-react";
+import { sharePhoto } from "../native/nativeBridge";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -49,6 +51,17 @@ export const Gallery = ({ open, onClose, onEdit }: Props) => {
               <Button variant="secondary" onClick={() => download(active)}>
                 <Download className="w-4 h-4 mr-2" /> Download
               </Button>
+              {active.type === "photo" && (
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const ok = await sharePhoto(active.dataUrl);
+                    if (!ok) toast.error("Share not supported on this device");
+                  }}
+                >
+                  <Share2 className="w-4 h-4 mr-2" /> Share
+                </Button>
+              )}
               {active.type === "photo" && onEdit && (
                 <Button onClick={() => onEdit(active)}>
                   <Wand2 className="w-4 h-4 mr-2" /> Edit
