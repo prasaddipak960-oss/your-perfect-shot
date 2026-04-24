@@ -51,6 +51,17 @@ export const Gallery = ({ open, onClose, onEdit }: Props) => {
               <Button variant="secondary" onClick={() => download(active)}>
                 <Download className="w-4 h-4 mr-2" /> Download
               </Button>
+              {active.type === "photo" && (
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const ok = await sharePhoto(active.dataUrl);
+                    if (!ok) toast.error("Share not supported on this device");
+                  }}
+                >
+                  <Share2 className="w-4 h-4 mr-2" /> Share
+                </Button>
+              )}
               {active.type === "photo" && onEdit && (
                 <Button onClick={() => onEdit(active)}>
                   <Wand2 className="w-4 h-4 mr-2" /> Edit
