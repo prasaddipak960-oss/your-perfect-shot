@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isNative, requestNativeCameraPermission } from "./nativePermissions";
 
 export type FacingMode = "user" | "environment";
 export type PermissionState = "prompt" | "granted" | "denied";
@@ -123,8 +124,21 @@ export const useCamera = () => {
 
   // Auto-start on mount + when facing changes
   useEffect(() => {
-    // Pre-check permission state where supported (Chromium/Android)
     const tryStart = async () => {
+      // 1) Native (Capacitor Android/iOS): trigger native permission popup first.
+      if (isNative()) {
+        const granted = await requestNativeCameraPermission();
+        if (!granted) {
+          setPermission("denied");
+          setError("Camera permission is required");
+          return;
+        }
+        // Permission granted — start the WebView camera stream.
+        start(facing);
+        return;
+      }
+
+      // 2) Web browser: pre-check permission state where supported (Chromium/Android)
       try {
         const perms = (navigator as Navigator & {
           permissions?: { query: (d: { name: PermissionName }) => Promise<PermissionStatus> };
@@ -147,7 +161,15 @@ export const useCamera = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
 
-  const retry = useCallback(() => {
+  const retry = useCallback(async () => {
+    if (isNative()) {
+      const granted = await requestNativeCameraPermission();
+      if (!granted) {
+        setPermission("denied");
+        setError("Camera permission is required");
+        return;
+      }
+    }
     start(facing);
   }, [start, facing]);
 
