@@ -216,7 +216,8 @@ export const CameraApp = () => {
       </div>
 
       {/* Top toolbar */}
-      <div className="absolute top-0 left-0 right-0 z-20 px-5 pt-7 pb-3 flex items-center justify-between">
+      <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-7 pb-3 flex items-center justify-between gap-1">
+        <SettingsMenu />
         <button
           onClick={() => {
             if (torchSupported) toggleTorch();
