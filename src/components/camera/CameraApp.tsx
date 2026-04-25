@@ -33,7 +33,7 @@ const MODE_FILTERS: Record<Mode, string> = {
 };
 
 export const CameraApp = () => {
-  const { videoRef, ready, error, permission, retry, flip, torchSupported, torchOn, toggleTorch, facing } = useCamera();
+  const { videoRef, ready, error, permission, needsGesture, retry, flip, torchSupported, torchOn, toggleTorch, facing } = useCamera();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunks = useRef<Blob[]>([]);
@@ -306,10 +306,24 @@ export const CameraApp = () => {
             </div>
           )}
 
-          {!ready && !error && (
+          {!ready && !error && !needsGesture && (
             <div className="absolute inset-0 grid place-items-center bg-black/40 text-sm text-foreground/70">
               Starting camera…
             </div>
+          )}
+          {!ready && !error && needsGesture && (
+            <button
+              onClick={retry}
+              className="absolute inset-0 grid place-items-center bg-black/70 text-center"
+            >
+              <div>
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-camera-yellow text-black grid place-items-center text-2xl">
+                  ▶
+                </div>
+                <p className="text-sm text-foreground font-medium">Tap to start camera</p>
+                <p className="text-[11px] text-foreground/60 mt-1">Allow access when prompted</p>
+              </div>
+            </button>
           )}
           {error && (
             <div className="absolute inset-0 grid place-items-center bg-black/80 p-6 text-center">

@@ -13,6 +13,7 @@ export const useCamera = () => {
   const [permission, setPermission] = useState<PermissionState>("prompt");
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [needsGesture, setNeedsGesture] = useState(false);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -46,6 +47,7 @@ export const useCamera = () => {
     setTorchSupported(!!caps.torch);
     setTorchOn(false);
     setPermission("granted");
+    setNeedsGesture(false);
     setReady(true);
   };
 
@@ -55,20 +57,15 @@ export const useCamera = () => {
       setReady(false);
       setError(null);
 
-      // Mobile camera requires HTTPS (or localhost)
-      const isSecure =
-        typeof window !== "undefined" &&
-        (window.isSecureContext ||
-          location.hostname === "localhost" ||
-          location.hostname === "127.0.0.1");
-      if (!isSecure) {
-        setError("Camera requires HTTPS. Open this site over a secure (https) connection.");
-        setPermission("denied");
-        return;
-      }
+      // NOTE: We intentionally do NOT block on isSecureContext here.
+      // Many WebView wrappers (WebsiteToApp, WebIntoApp, native WebView)
+      // report isSecureContext=false even though camera works fine.
+      // We let getUserMedia itself decide and surface the real error.
 
       if (!navigator.mediaDevices?.getUserMedia) {
-        setError("Camera API not supported in this browser.");
+        setError(
+          "Camera API not available. If you're using a website-to-app wrapper, it likely doesn't grant camera access — please install the official APK instead."
+        );
         return;
       }
 
@@ -95,7 +92,16 @@ export const useCamera = () => {
               audio: false,
             });
           } else {
-            throw audioErr;
+            // Try video-only as a last resort even on permission errors
+            // (some WebViews block audio entirely)
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: videoConstraints,
+                audio: false,
+              });
+            } catch {
+              throw audioErr;
+            }
           }
         }
         await attachStream(stream);
@@ -110,7 +116,7 @@ export const useCamera = () => {
         setPermission(denied ? "denied" : "prompt");
         setError(
           denied
-            ? "Camera permission is required"
+            ? "Camera permission is required. Tap Retry and allow access."
             : notFound
             ? "No camera found on this device"
             : inUse
@@ -124,42 +130,76 @@ export const useCamera = () => {
 
   // Auto-start on mount + when facing changes
   useEffect(() => {
+    let cancelled = false;
     const tryStart = async () => {
       // 1) Native (Capacitor Android/iOS): trigger native permission popup first.
       if (isNative()) {
         const granted = await requestNativeCameraPermission();
+        if (cancelled) return;
         if (!granted) {
           setPermission("denied");
           setError("Camera permission is required");
           return;
         }
-        // Permission granted — start the WebView camera stream.
         start(facing);
         return;
       }
 
-      // 2) Web browser: pre-check permission state where supported (Chromium/Android)
+      // 2) Web/WebView browser: try getUserMedia immediately. If WebView
+      // requires a gesture, we'll detect it and prompt user to tap.
       try {
         const perms = (navigator as Navigator & {
           permissions?: { query: (d: { name: PermissionName }) => Promise<PermissionStatus> };
         }).permissions;
         if (perms?.query) {
-          const status = await perms.query({ name: "camera" as PermissionName });
-          if (status.state === "denied") {
-            setPermission("denied");
-            setError("Camera permission is required");
-            return;
+          try {
+            const status = await perms.query({ name: "camera" as PermissionName });
+            if (cancelled) return;
+            if (status.state === "denied") {
+              setPermission("denied");
+              setError("Camera permission is required");
+              return;
+            }
+          } catch {
+            /* permissions.query unsupported in some WebViews — ignore */
           }
         }
       } catch {
-        /* permissions API not supported, continue */
+        /* ignore */
       }
-      start(facing);
+      if (!cancelled) start(facing);
     };
     tryStart();
-    return () => stop();
+    return () => {
+      cancelled = true;
+      stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
+
+  // Fallback: if camera didn't start within 2s in a WebView, ask user to tap.
+  useEffect(() => {
+    if (ready || error) return;
+    const t = window.setTimeout(() => {
+      if (!streamRef.current) setNeedsGesture(true);
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [ready, error, facing]);
+
+  // Listen for first user gesture to retry camera (helps with strict WebViews)
+  useEffect(() => {
+    if (!needsGesture) return;
+    const handler = () => {
+      setNeedsGesture(false);
+      start(facing);
+    };
+    window.addEventListener("touchstart", handler, { once: true });
+    window.addEventListener("click", handler, { once: true });
+    return () => {
+      window.removeEventListener("touchstart", handler);
+      window.removeEventListener("click", handler);
+    };
+  }, [needsGesture, start, facing]);
 
   const retry = useCallback(async () => {
     if (isNative()) {
@@ -187,5 +227,17 @@ export const useCamera = () => {
     }
   };
 
-  return { videoRef, facing, ready, error, permission, retry, flip, torchSupported, torchOn, toggleTorch };
+  return {
+    videoRef,
+    facing,
+    ready,
+    error,
+    permission,
+    needsGesture,
+    retry,
+    flip,
+    torchSupported,
+    torchOn,
+    toggleTorch,
+  };
 };
