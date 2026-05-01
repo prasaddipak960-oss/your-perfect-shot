@@ -3,6 +3,7 @@ import { SplashScreen } from "@/components/native/SplashScreen";
 import { ExitDialog } from "@/components/native/ExitDialog";
 import { OfflineBanner } from "@/components/native/OfflineBanner";
 import { hideNativeSplash } from "@/components/native/nativeBridge";
+import { initPushNotifications } from "@/components/native/pushNotifications";
 import { useEffect, useState } from "react";
 
 const Index = () => {
@@ -22,6 +23,8 @@ const Index = () => {
     // Hide the native (Capacitor) splash as soon as React mounts so our
     // in-app splash takes over smoothly.
     hideNativeSplash();
+    // Request push notification permission on native (no-op on web).
+    initPushNotifications();
   }, []);
 
   return (
