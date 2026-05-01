@@ -85,8 +85,16 @@ export const SettingsMenu = () => {
             <DialogDescription className="text-foreground/70 text-sm pt-2 leading-relaxed">
               {info === "about" &&
                 "Your Perfect Shot is an HD camera app with Pro, Beauty, Night, Time-Lapse, Video and a stylish editor. All photos and videos are saved locally on your device — no cloud, no account needed."}
-              {info === "privacy" &&
-                "We respect your privacy. This app does NOT collect, upload, or share any photos, videos, or personal data. Camera and microphone access are used only on your device. All media stays in your local gallery."}
+              {info === "privacy" && (
+                <span className="block space-y-2">
+                  <span className="block">Your Perfect Shot respects your privacy. We do <strong>not</strong> collect, upload or share any of your photos, videos, or personal data.</span>
+                  <span className="block"><strong>Camera & Microphone:</strong> Used only on your device to capture photos and videos. Nothing leaves the device.</span>
+                  <span className="block"><strong>Storage:</strong> Captures are saved to your device's local gallery / app storage only.</span>
+                  <span className="block"><strong>Notifications:</strong> Optional. Used only to inform you about app updates and tips.</span>
+                  <span className="block"><strong>Network:</strong> The app works fully offline. Internet is only used for the optional "Share" feature.</span>
+                  <span className="block">Contact: support@yourperfectshot.app</span>
+                </span>
+              )}
               {info === "contact" &&
                 "Need help or want to report an issue? Email us at support@yourperfectshot.app — we usually reply within 24 hours."}
             </DialogDescription>
