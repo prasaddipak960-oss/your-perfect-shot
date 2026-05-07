@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { openRateUs, shareApp } from "./nativeBridge";
+import { PermissionsDialog } from "./PermissionsDialog";
 import { toast } from "sonner";
 
 const MenuIcon = () => (
