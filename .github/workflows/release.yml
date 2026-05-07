@@ -44,6 +44,9 @@ jobs:
       - name: Capacitor sync
         run: npx cap sync android
 
+      - name: Patch Android WebView (camera + mic + file chooser)
+        run: bash scripts/patch-android-webview.sh
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
