@@ -104,6 +104,8 @@ export const SettingsMenu = () => {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      <PermissionsDialog open={permsOpen} onOpenChange={setPermsOpen} />
     </>
   );
 };
