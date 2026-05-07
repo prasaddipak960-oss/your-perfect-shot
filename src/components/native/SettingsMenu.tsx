@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { openRateUs, shareApp } from "./nativeBridge";
+import { PermissionsDialog } from "./PermissionsDialog";
 import { toast } from "sonner";
 
 const MenuIcon = () => (
@@ -16,6 +17,7 @@ type InfoKey = "about" | "privacy" | "contact" | null;
 
 export const SettingsMenu = () => {
   const [info, setInfo] = useState<InfoKey>(null);
+  const [permsOpen, setPermsOpen] = useState(false);
 
   const handleShare = async () => {
     const res = await shareApp();
@@ -24,6 +26,7 @@ export const SettingsMenu = () => {
   };
 
   const items: { key: string; label: string; icon: string; onClick: () => void }[] = [
+    { key: "perms", label: "Permissions", icon: "🛡️", onClick: () => setPermsOpen(true) },
     { key: "share", label: "Share App", icon: "📤", onClick: handleShare },
     { key: "rate", label: "Rate this App", icon: "⭐", onClick: openRateUs },
     { key: "about", label: "About", icon: "ℹ️", onClick: () => setInfo("about") },
@@ -101,6 +104,8 @@ export const SettingsMenu = () => {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      <PermissionsDialog open={permsOpen} onOpenChange={setPermsOpen} />
     </>
   );
 };
