@@ -113,13 +113,23 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Runtime permission popup at launch
+        // Runtime permission popup at launch.
+        // Android 13+ (API 33) uses granular media permissions; older versions
+        // still need READ_EXTERNAL_STORAGE for the file chooser to surface
+        // gallery items.
         if (Build.VERSION.SDK_INT >= 23) {
-            ActivityCompat.requestPermissions(this, new String[]{
-                Manifest.permission.CAMERA,
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.MODIFY_AUDIO_SETTINGS
-            }, REQ_PERMS);
+            List<String> needed = new ArrayList<>();
+            needed.add(Manifest.permission.CAMERA);
+            needed.add(Manifest.permission.RECORD_AUDIO);
+            needed.add(Manifest.permission.MODIFY_AUDIO_SETTINGS);
+            if (Build.VERSION.SDK_INT >= 33) {
+                needed.add(Manifest.permission.READ_MEDIA_IMAGES);
+                needed.add(Manifest.permission.READ_MEDIA_VIDEO);
+            } else {
+                needed.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+            ActivityCompat.requestPermissions(
+                this, needed.toArray(new String[0]), REQ_PERMS);
         }
 
         // Result handler for <input type="file"> chooser
