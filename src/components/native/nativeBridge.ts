@@ -10,6 +10,22 @@ import { Network } from "@capacitor/network";
 
 export const isNative = () => Capacitor.isNativePlatform();
 
+// Native bridge injected by MainActivity (Android only).
+type YPSBridge = {
+  openAppSettings: () => void;
+  shareApk: () => void;
+  rateApp: () => void;
+  isNative: () => boolean;
+};
+const yps = (): YPSBridge | null =>
+  (typeof window !== "undefined" && (window as unknown as { YPSNative?: YPSBridge }).YPSNative) || null;
+
+export const openAppSettings = () => {
+  const b = yps();
+  if (b) { b.openAppSettings(); return true; }
+  return false;
+};
+
 const STORE_URL =
   "https://play.google.com/store/apps/details?id=app.lovable.38ed2fa1b8be4dc3baa7baa53fc43c53";
 
