@@ -1,6 +1,7 @@
 import { CameraApp } from "@/components/camera/CameraApp";
 import { SplashScreen } from "@/components/native/SplashScreen";
 import { ExitDialog } from "@/components/native/ExitDialog";
+import { FirstRunPermissions } from "@/components/native/FirstRunPermissions";
 import { OfflineBanner } from "@/components/native/OfflineBanner";
 import { hideNativeSplash } from "@/components/native/nativeBridge";
 import { initPushNotifications } from "@/components/native/pushNotifications";
