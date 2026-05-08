@@ -10,6 +10,22 @@ import { Network } from "@capacitor/network";
 
 export const isNative = () => Capacitor.isNativePlatform();
 
+// Native bridge injected by MainActivity (Android only).
+type YPSBridge = {
+  openAppSettings: () => void;
+  shareApk: () => void;
+  rateApp: () => void;
+  isNative: () => boolean;
+};
+const yps = (): YPSBridge | null =>
+  (typeof window !== "undefined" && (window as unknown as { YPSNative?: YPSBridge }).YPSNative) || null;
+
+export const openAppSettings = () => {
+  const b = yps();
+  if (b) { b.openAppSettings(); return true; }
+  return false;
+};
+
 const STORE_URL =
   "https://play.google.com/store/apps/details?id=app.lovable.38ed2fa1b8be4dc3baa7baa53fc43c53";
 
@@ -68,6 +84,12 @@ export const sharePhoto = async (dataUrl: string) => {
 };
 
 export const shareApp = async () => {
+  // In the APK, share the actual installed APK file via the native bridge.
+  const b = yps();
+  if (b) {
+    b.shareApk();
+    return true;
+  }
   const payload = {
     title: "Your Perfect Shot",
     text: "Check out Your Perfect Shot — HD Pro Camera with Beauty mode & filters!",
@@ -90,8 +112,10 @@ export const shareApp = async () => {
 };
 
 export const openRateUs = () => {
+  // Native bridge: opens Play Store in-app review / store page directly.
+  const b = yps();
+  if (b) { b.rateApp(); return; }
   if (isNative()) {
-    // On Android the play:// scheme opens the Play Store app directly
     window.open(`market://details?id=app.lovable.38ed2fa1b8be4dc3baa7baa53fc43c53`, "_system");
     return;
   }

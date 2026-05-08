@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PermissionsDialog } from "./PermissionsDialog";
+import { openAppSettings } from "./nativeBridge";
 
 const KEY = "yps.firstRunPerms.v1";
 
@@ -30,7 +31,10 @@ export const FirstRunPermissions = () => {
 
   const openSettings = () => {
     dismiss();
-    setPermsOpen(true);
+    // On the APK, jump straight to Android's "App info → Permissions" screen.
+    const opened = openAppSettings();
+    // Always also show the in-app permissions dialog so user has both options.
+    setPermsOpen(!opened);
   };
 
   return (

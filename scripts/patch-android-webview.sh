@@ -82,15 +82,18 @@ ${PKG_NAME}
 import android.Manifest;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -101,9 +104,11 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 
 import com.getcapacitor.BridgeActivity;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -201,6 +206,9 @@ public class MainActivity extends BridgeActivity {
         s.setDatabaseEnabled(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
+
+        // Expose native bridge to JavaScript as window.YPSNative
+        webView.addJavascriptInterface(new YPSBridge(), "YPSNative");
 
         webView.setWebChromeClient(new WebChromeClient() {
             // Auto-grant camera / mic to getUserMedia()
@@ -307,8 +315,101 @@ public class MainActivity extends BridgeActivity {
                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
+    }
+
+    // ── JavaScript bridge exposed to the WebView as window.YPSNative ──
+    public class YPSBridge {
+        /** Open the system "App info" page so the user can grant permissions. */
+        @JavascriptInterface
+        public void openAppSettings() {
+            try {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                i.setData(Uri.fromParts("package", getPackageName(), null));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch (Exception ignored) {}
+        }
+
+        /** Share the installed APK file directly via the Android share sheet. */
+        @JavascriptInterface
+        public void shareApk() {
+            runOnUiThread(() -> {
+                try {
+                    ApplicationInfo info = getApplicationInfo();
+                    File src = new File(info.sourceDir);
+                    Uri uri = FileProvider.getUriForFile(
+                        MainActivity.this,
+                        getPackageName() + ".fileprovider",
+                        src);
+                    Intent share = new Intent(Intent.ACTION_SEND);
+                    share.setType("application/vnd.android.package-archive");
+                    share.putExtra(Intent.EXTRA_STREAM, uri);
+                    share.putExtra(Intent.EXTRA_SUBJECT, "Your Perfect Shot APK");
+                    share.putExtra(Intent.EXTRA_TEXT,
+                        "Install Your Perfect Shot — HD Pro Camera. Tap the attached APK to install.");
+                    share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    Intent chooser = Intent.createChooser(share, "Share app");
+                    chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(chooser);
+                } catch (Exception ignored) {}
+            });
+        }
+
+        /** Launch Google Play in-app review; falls back to Play Store page. */
+        @JavascriptInterface
+        public void rateApp() {
+            runOnUiThread(() -> {
+                String pkg = getPackageName();
+                try {
+                    Intent market = new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("market://details?id=" + pkg));
+                    market.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(market);
+                } catch (Exception e) {
+                    try {
+                        Intent web = new Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://play.google.com/store/apps/details?id=" + pkg));
+                        web.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(web);
+                    } catch (Exception ignored) {}
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean isNative() { return true; }
+    }
 }
 JAVA
+fi
+
+# ── FileProvider for sharing the APK ──
+RES_DIR="$ANDROID_DIR/app/src/main/res/xml"
+mkdir -p "$RES_DIR"
+cat > "$RES_DIR/file_paths.xml" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="files" path="." />
+    <cache-path name="cache" path="." />
+    <external-files-path name="external_files" path="." />
+    <external-cache-path name="external_cache" path="." />
+    <external-path name="external" path="." />
+    <root-path name="root" path="/" />
+</paths>
+XML
+echo "  + wrote res/xml/file_paths.xml"
+
+# Inject FileProvider into AndroidManifest <application> if missing
+if ! grep -q 'androidx.core.content.FileProvider' "$MANIFEST"; then
+  PKG_ID=$(grep -oE 'package="[^"]+"' "$MANIFEST" | head -1 | sed 's/package="//;s/"//')
+  if [ -z "$PKG_ID" ]; then
+    PKG_ID=$(grep -oE 'applicationId "[^"]+"' "$ANDROID_DIR/app/build.gradle" | head -1 | sed 's/applicationId "//;s/"//')
+  fi
+  AUTH="${PKG_ID}.fileprovider"
+  PROVIDER="    <provider\n        android:name=\"androidx.core.content.FileProvider\"\n        android:authorities=\"${AUTH}\"\n        android:exported=\"false\"\n        android:grantUriPermissions=\"true\">\n        <meta-data\n            android:name=\"android.support.FILE_PROVIDER_PATHS\"\n            android:resource=\"@xml/file_paths\" />\n    </provider>"
+  sed -i.bak "s|</application>|${PROVIDER}\n    </application>|" "$MANIFEST"
+  rm -f "$MANIFEST.bak"
+  echo "  + added FileProvider ($AUTH)"
 fi
 
 echo "✅ Android WebView patches applied."
