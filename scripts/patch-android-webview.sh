@@ -207,6 +207,9 @@ public class MainActivity extends BridgeActivity {
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
 
+        // Expose native bridge to JavaScript as window.YPSNative
+        webView.addJavascriptInterface(new YPSBridge(), "YPSNative");
+
         webView.setWebChromeClient(new WebChromeClient() {
             // Auto-grant camera / mic to getUserMedia()
             @Override
