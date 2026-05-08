@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PermissionsDialog } from "./PermissionsDialog";
+import { openAppSettings } from "./nativeBridge";
 
 const KEY = "yps.firstRunPerms.v1";
 
