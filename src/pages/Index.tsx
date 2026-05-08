@@ -34,6 +34,7 @@ const Index = () => {
       {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
       <CameraApp />
       <ExitDialog />
+      <FirstRunPermissions />
       <OfflineBanner />
     </main>
   );
