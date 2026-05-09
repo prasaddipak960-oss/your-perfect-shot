@@ -17,6 +17,7 @@ import {
 } from "./icons";
 import { toast } from "sonner";
 import { SettingsMenu } from "../native/SettingsMenu";
+import { PermissionsIndicator } from "../native/PermissionsIndicator";
 
 type Mode = "Time-Lapse" | "Night" | "Pro" | "Photo" | "Video" | "Beauty" | "Short Video";
 const MODES: Mode[] = ["Time-Lapse", "Night", "Pro", "Photo", "Video", "Beauty", "Short Video"];
