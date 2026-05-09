@@ -412,5 +412,14 @@ if ! grep -q 'androidx.core.content.FileProvider' "$MANIFEST"; then
   echo "  + added FileProvider ($AUTH)"
 fi
 
+# ─── Bump versionName / versionCode in app/build.gradle ─────────────────────
+GRADLE="$ANDROID_DIR/app/build.gradle"
+if [ -f "$GRADLE" ]; then
+  sed -i.bak -E 's/versionName "[^"]*"/versionName "1.0.1"/' "$GRADLE"
+  sed -i.bak -E 's/versionCode [0-9]+/versionCode 2/' "$GRADLE"
+  rm -f "$GRADLE.bak"
+  echo "  + set versionName=1.0.1 versionCode=2 in app/build.gradle"
+fi
+
 echo "✅ Android WebView patches applied."
 echo "   Next: npm run build && npx cap sync android && npx cap open android"
