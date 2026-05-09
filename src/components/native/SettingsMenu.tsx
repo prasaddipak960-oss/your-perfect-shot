@@ -55,7 +55,7 @@ export const SettingsMenu = () => {
               </div>
               <div>
                 <SheetTitle className="text-foreground text-base">Your Perfect Shot</SheetTitle>
-                <p className="text-[11px] text-foreground/50">v1.0 · Offline mode</p>
+                <p className="text-[11px] text-foreground/50">v1.0.1 · Offline mode</p>
               </div>
             </div>
           </SheetHeader>

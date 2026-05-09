@@ -43,7 +43,7 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
           <span className="w-2 h-2 rounded-full bg-camera-yellow animate-bounce" style={{ animationDelay: "300ms" }} />
         </div>
       </div>
-      <p className="absolute bottom-6 text-[10px] text-foreground/40">v1.0 · Made for Mobile</p>
+      <p className="absolute bottom-6 text-[10px] text-foreground/40">v1.0.1 · Made for Mobile</p>
     </div>
   );
 };
