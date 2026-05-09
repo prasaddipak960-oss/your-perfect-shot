@@ -210,8 +210,9 @@ export const CameraApp = () => {
 
   return (
     <div className="relative w-full h-[100dvh] bg-background text-foreground overflow-hidden select-none">
-      {/* Status dot */}
+      {/* Status indicators */}
       <div className="absolute top-2 right-3 z-30 flex items-center gap-2">
+        <PermissionsIndicator />
         <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(0,255,80,0.8)]" />
       </div>
 
