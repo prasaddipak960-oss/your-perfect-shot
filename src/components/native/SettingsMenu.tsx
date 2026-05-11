@@ -56,7 +56,7 @@ export const SettingsMenu = () => {
   const items: NavItem[] = [
     { key: "perms", label: "Permissions", icon: "🛡️", onClick: () => setPermsOpen(true) },
     { key: "share", label: "Share App", icon: "📤", onClick: handleShare },
-    { key: "rate", label: "Rate this App", icon: "⭐", onClick: openRateUs },
+    { key: "rate", label: "Rate this App", icon: "⭐", onClick: handleRate },
     { key: "about", label: "About", icon: "ℹ️", to: "/about" },
     { key: "privacy", label: "Privacy Policy", icon: "🔒", to: "/privacy" },
     { key: "terms", label: "Terms & Conditions", icon: "📄", to: "/terms" },
@@ -118,6 +118,22 @@ export const SettingsMenu = () => {
       </Sheet>
 
       <PermissionsDialog open={permsOpen} onOpenChange={setPermsOpen} />
+
+      {offlineGate && (
+        <NoInternetPage
+          onRetry={async () => {
+            const online = await checkOnline();
+            if (online) {
+              const pending = offlineGate;
+              setOfflineGate(null);
+              await pending();
+            } else {
+              toast.error("Still offline — connect to Wi-Fi or mobile data");
+            }
+          }}
+          onClose={() => setOfflineGate(null)}
+        />
+      )}
     </>
   );
 };
