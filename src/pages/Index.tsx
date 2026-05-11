@@ -3,6 +3,7 @@ import { SplashScreen } from "@/components/native/SplashScreen";
 import { ExitDialog } from "@/components/native/ExitDialog";
 import { FirstRunPermissions } from "@/components/native/FirstRunPermissions";
 import { OfflineBanner } from "@/components/native/OfflineBanner";
+import { PullToRefresh } from "@/components/native/PullToRefresh";
 import { hideNativeSplash } from "@/components/native/nativeBridge";
 import { initPushNotifications } from "@/components/native/pushNotifications";
 import { useEffect, useState } from "react";
@@ -32,7 +33,9 @@ const Index = () => {
     <main className="min-h-[100dvh] bg-background">
       <h1 className="sr-only">Your Perfect Shot — HD Pro Camera</h1>
       {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
-      <CameraApp />
+      <PullToRefresh>
+        <CameraApp />
+      </PullToRefresh>
       <ExitDialog />
       <FirstRunPermissions />
       <OfflineBanner />
