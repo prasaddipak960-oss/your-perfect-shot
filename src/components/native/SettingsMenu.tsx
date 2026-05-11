@@ -13,10 +13,9 @@ const MenuIcon = () => (
   </svg>
 );
 
-type InfoKey = "about" | "privacy" | "contact" | null;
+type NavItem = { key: string; label: string; icon: string; to?: string; onClick?: () => void };
 
 export const SettingsMenu = () => {
-  const [info, setInfo] = useState<InfoKey>(null);
   const [permsOpen, setPermsOpen] = useState(false);
 
   const handleShare = async () => {
@@ -25,13 +24,14 @@ export const SettingsMenu = () => {
     else if (!res) toast.error("Couldn't share — try again");
   };
 
-  const items: { key: string; label: string; icon: string; onClick: () => void }[] = [
+  const items: NavItem[] = [
     { key: "perms", label: "Permissions", icon: "🛡️", onClick: () => setPermsOpen(true) },
     { key: "share", label: "Share App", icon: "📤", onClick: handleShare },
     { key: "rate", label: "Rate this App", icon: "⭐", onClick: openRateUs },
-    { key: "about", label: "About", icon: "ℹ️", onClick: () => setInfo("about") },
-    { key: "privacy", label: "Privacy Policy", icon: "🔒", onClick: () => setInfo("privacy") },
-    { key: "contact", label: "Contact", icon: "✉️", onClick: () => setInfo("contact") },
+    { key: "about", label: "About", icon: "ℹ️", to: "/about" },
+    { key: "privacy", label: "Privacy Policy", icon: "🔒", to: "/privacy" },
+    { key: "terms", label: "Terms & Conditions", icon: "📄", to: "/terms" },
+    { key: "contact", label: "Contact", icon: "✉️", to: "/contact" },
   ];
 
   return (
@@ -60,50 +60,33 @@ export const SettingsMenu = () => {
             </div>
           </SheetHeader>
           <nav className="p-3 space-y-1">
-            {items.map((it) => (
-              <button
-                key={it.key}
-                onClick={it.onClick}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-sm hover:bg-white/5 transition"
-              >
-                <span className="text-lg w-6 text-center">{it.icon}</span>
-                <span className="text-foreground/90">{it.label}</span>
-              </button>
-            ))}
+            {items.map((it) =>
+              it.to ? (
+                <Link
+                  key={it.key}
+                  to={it.to}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-sm hover:bg-white/5 transition"
+                >
+                  <span className="text-lg w-6 text-center">{it.icon}</span>
+                  <span className="text-foreground/90">{it.label}</span>
+                </Link>
+              ) : (
+                <button
+                  key={it.key}
+                  onClick={it.onClick}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-sm hover:bg-white/5 transition"
+                >
+                  <span className="text-lg w-6 text-center">{it.icon}</span>
+                  <span className="text-foreground/90">{it.label}</span>
+                </button>
+              )
+            )}
           </nav>
           <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] text-foreground/40">
             © 2026 Your Perfect Shot
           </div>
         </SheetContent>
       </Sheet>
-
-      <Dialog open={!!info} onOpenChange={(o) => !o && setInfo(null)}>
-        <DialogContent className="bg-background border-white/10 text-foreground max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">
-              {info === "about" && "About"}
-              {info === "privacy" && "Privacy Policy"}
-              {info === "contact" && "Contact"}
-            </DialogTitle>
-            <DialogDescription className="text-foreground/70 text-sm pt-2 leading-relaxed">
-              {info === "about" &&
-                "Your Perfect Shot is an HD camera app with Pro, Beauty, Night, Time-Lapse, Video and a stylish editor. All photos and videos are saved locally on your device — no cloud, no account needed."}
-              {info === "privacy" && (
-                <span className="block space-y-2">
-                  <span className="block">Your Perfect Shot respects your privacy. We do <strong>not</strong> collect, upload or share any of your photos, videos, or personal data.</span>
-                  <span className="block"><strong>Camera & Microphone:</strong> Used only on your device to capture photos and videos. Nothing leaves the device.</span>
-                  <span className="block"><strong>Storage:</strong> Captures are saved to your device's local gallery / app storage only.</span>
-                  <span className="block"><strong>Notifications:</strong> Optional. Used only to inform you about app updates and tips.</span>
-                  <span className="block"><strong>Network:</strong> The app works fully offline. Internet is only used for the optional "Share" feature.</span>
-                  <span className="block">Contact: support@yourperfectshot.app</span>
-                </span>
-              )}
-              {info === "contact" &&
-                "Need help or want to report an issue? Email us at support@yourperfectshot.app — we usually reply within 24 hours."}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
 
       <PermissionsDialog open={permsOpen} onOpenChange={setPermsOpen} />
     </>
