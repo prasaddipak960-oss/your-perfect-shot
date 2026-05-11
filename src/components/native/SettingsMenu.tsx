@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { openRateUs, shareApp } from "./nativeBridge";
 import { PermissionsDialog } from "./PermissionsDialog";
+import { NoInternetPage } from "./NoInternetPage";
+import { Network } from "@capacitor/network";
+import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 
 const MenuIcon = () => (
@@ -15,19 +18,45 @@ const MenuIcon = () => (
 
 type NavItem = { key: string; label: string; icon: string; to?: string; onClick?: () => void };
 
+const checkOnline = async (): Promise<boolean> => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const s = await Network.getStatus();
+      return s.connected;
+    } catch {
+      return navigator.onLine;
+    }
+  }
+  return navigator.onLine;
+};
+
 export const SettingsMenu = () => {
   const [permsOpen, setPermsOpen] = useState(false);
+  const [offlineGate, setOfflineGate] = useState<null | (() => void)>(null);
 
-  const handleShare = async () => {
+  const runOnline = async (action: () => void | Promise<void>) => {
+    const online = await checkOnline();
+    if (!online) {
+      setOfflineGate(() => action);
+      return;
+    }
+    await action();
+  };
+
+  const doShare = async () => {
     const res = await shareApp();
     if (res === "copied") toast.success("Store link copied to clipboard");
     else if (!res) toast.error("Couldn't share — try again");
   };
 
+  const handleShare = () => runOnline(doShare);
+  const handleRate = () => runOnline(openRateUs);
+
+
   const items: NavItem[] = [
     { key: "perms", label: "Permissions", icon: "🛡️", onClick: () => setPermsOpen(true) },
     { key: "share", label: "Share App", icon: "📤", onClick: handleShare },
-    { key: "rate", label: "Rate this App", icon: "⭐", onClick: openRateUs },
+    { key: "rate", label: "Rate this App", icon: "⭐", onClick: handleRate },
     { key: "about", label: "About", icon: "ℹ️", to: "/about" },
     { key: "privacy", label: "Privacy Policy", icon: "🔒", to: "/privacy" },
     { key: "terms", label: "Terms & Conditions", icon: "📄", to: "/terms" },
@@ -89,6 +118,22 @@ export const SettingsMenu = () => {
       </Sheet>
 
       <PermissionsDialog open={permsOpen} onOpenChange={setPermsOpen} />
+
+      {offlineGate && (
+        <NoInternetPage
+          onRetry={async () => {
+            const online = await checkOnline();
+            if (online) {
+              const pending = offlineGate;
+              setOfflineGate(null);
+              await pending();
+            } else {
+              toast.error("Still offline — connect to Wi-Fi or mobile data");
+            }
+          }}
+          onClose={() => setOfflineGate(null)}
+        />
+      )}
     </>
   );
 };

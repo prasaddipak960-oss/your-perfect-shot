@@ -1,22 +1,8 @@
-import { useEffect, useState } from "react";
-import { subscribeNetwork } from "./nativeBridge";
-
 /**
- * Full-screen "no internet" page that only appears for features that genuinely
- * need network (e.g. tapping Rate / Share-store-link). The camera itself works
- * offline so this is not shown on launch.
+ * Full-screen "no internet" page. Visibility is controlled by the parent —
+ * mount it only when you want to block an online-only action.
  */
 export const NoInternetPage = ({ onRetry, onClose }: { onRetry?: () => void; onClose?: () => void }) => {
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    const unsub = subscribeNetwork(setOnline);
-    return () => {
-      const r = unsub as unknown as () => void;
-      r?.();
-    };
-  }, []);
-
-  if (online) return null;
 
   return (
     <div className="fixed inset-0 z-[90] bg-background grid place-items-center px-6 text-center">
